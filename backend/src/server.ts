@@ -23,7 +23,7 @@ router.get("/videos", async (ctx) => {
   const mediaUrl = ctx.request.query.mediaUrl;
   console.log("mediaUrl", mediaUrl);
 
-  const audioOnly = !!ctx.request.query.audioOnly ?? false;
+  const audioOnly = ctx.request.query.audioOnly != null ?? false;
   console.log("audioOnly", audioOnly);
 
   if (!isUrlValid(mediaUrl)) {
@@ -52,10 +52,14 @@ router.get("/videos", async (ctx) => {
 
   console.log("fileInfo", fileInfo);
 
+  const encodedFilename = encodeURIComponent(fileInfo.filename);
+
   ctx.response.set(
     "content-disposition",
-    `attachment; filename*=UTF-8''${encodeURIComponent(fileInfo.filename)}`
+    `attachment; filename*=UTF-8''${encodedFilename}`
   );
+
+  ctx.response.set("filename", encodedFilename);
 
   const src = fs.createReadStream(fileInfo.location);
   ctx.body = src;
