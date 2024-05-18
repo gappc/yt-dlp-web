@@ -9,10 +9,15 @@ import { promisify } from "util";
 import * as fs from "fs";
 import { buildFileInfo, isUrlValid } from "./utils";
 
+import cron from "node-cron";
+
 const execAsync = promisify(exec);
 
 const app = new koa();
 const router = new Router();
+
+const mediaFolder = "media";
+const archiveFolder = `${mediaFolder}/archive`;
 
 router.get("/hello", (ctx) => (ctx.body = "Hello World!"));
 
@@ -33,9 +38,7 @@ router.get("/videos", async (ctx) => {
     return;
   }
 
-  const folder = "media";
-
-  const baseCommand = `yt-dlp --no-simulate --dump-json -o "${folder}/%(title)s.%(ext)s"`;
+  const baseCommand = `yt-dlp --no-simulate --dump-json -o "${mediaFolder}/%(title)s.%(ext)s"`;
   const withAudioOnly = audioOnly ? "-f 'ba' -x --audio-format mp3" : "";
 
   const command = `${baseCommand} ${withAudioOnly} ${mediaUrl}`;
@@ -66,6 +69,25 @@ router.get("/videos", async (ctx) => {
 });
 
 app.use(router.routes()).use(router.allowedMethods());
+
+// cron job to remove files in media folder
+const cronInterval = "* * * * * *";
+cron.schedule(cronInterval, () => {
+  console.log(`running file remove task for cron interval ${cronInterval}`);
+
+  fs.readdirSync(mediaFolder).forEach((file) => {
+    const filePath = `${mediaFolder}/${file}`;
+
+    // delete file if older than X miliseconds
+    const older = 5 * 60 * 1000;
+    const isOlder = fs.statSync(filePath).ctime.getTime() < Date.now() - older; // 604800000 = 7 * 24 * 60 * 60 * 1000
+
+    if (isOlder) {
+      console.log(`- deleting file ${file} after ${older}ms`);
+      fs.unlinkSync(filePath);
+    }
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
