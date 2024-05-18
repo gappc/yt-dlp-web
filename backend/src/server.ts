@@ -1,14 +1,13 @@
 console.log("Hello World");
 
-import Router from "koa-router";
 import koa from "koa";
+import Router from "koa-router";
 
 import { exec } from "child_process";
 import { promisify } from "util";
 
-import mime from "mime-types";
 import * as fs from "fs";
-import { isUrlValid } from "./validator";
+import { buildFileInfo, isUrlValid } from "./utils";
 
 const execAsync = promisify(exec);
 
@@ -21,9 +20,11 @@ router.get("/videos", async (ctx) => {
   console.log("-------------------------------------");
   console.log("------------ GET /videos ------------");
 
-  const mediaUrl = ctx.request.query.url;
-
+  const mediaUrl = ctx.request.query.mediaUrl;
   console.log("mediaUrl", mediaUrl);
+
+  const audioOnly = !!ctx.request.query.audioOnly ?? false;
+  console.log("audioOnly", audioOnly);
 
   if (!isUrlValid(mediaUrl)) {
     console.log("Invalid download URL", mediaUrl);
@@ -32,7 +33,12 @@ router.get("/videos", async (ctx) => {
     return;
   }
 
-  const command = `yt-dlp --no-simulate --dump-json -o "media/%(title)s.%(ext)s" ${mediaUrl}`;
+  const folder = "media";
+
+  const baseCommand = `yt-dlp --no-simulate --dump-json -o "${folder}/%(title)s.%(ext)s"`;
+  const withAudioOnly = audioOnly ? "-f 'ba' -x --audio-format mp3" : "";
+
+  const command = `${baseCommand} ${withAudioOnly} ${mediaUrl}`;
 
   console.log("command", command);
 
@@ -42,21 +48,16 @@ router.get("/videos", async (ctx) => {
 
   const data = JSON.parse(stdout);
 
-  console.log("JSON parsed");
+  const fileInfo = buildFileInfo(data.filename, audioOnly);
 
-  const { filename } = data;
-  const path = `./${filename}`;
+  console.log("fileInfo", fileInfo);
 
-  const mimeType = mime.lookup(path);
-  if (mimeType) {
-    ctx.response.set("content-type", mimeType);
-  }
   ctx.response.set(
     "content-disposition",
-    `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+    `attachment; filename*=UTF-8''${encodeURIComponent(fileInfo.filename)}`
   );
 
-  const src = fs.createReadStream(path);
+  const src = fs.createReadStream(fileInfo.location);
   ctx.body = src;
 });
 
