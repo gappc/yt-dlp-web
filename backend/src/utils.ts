@@ -1,13 +1,19 @@
 import { FileInfo } from "./types";
 
 export const isUrlValid = (value: string | string[] | undefined) => {
+  const validUrls = [
+    "https://www.youtube.com/watch?v=",
+    "https://m.youtube.com/watch?v=",
+    "https://youtu.be/",
+  ];
+  
   if (value == null) {
     return true;
   }
   if (Array.isArray(value)) {
-    return value.every((v) => v.startsWith("https://www.youtube.com/watch?v="));
+    return value.find((v) => validUrls.find(u => v.startsWith(u)))
   }
-  return value.startsWith("https://www.youtube.com/watch?v=");
+  return validUrls.find(u => value.startsWith(u))
 };
 
 export const buildFileInfo = (
