@@ -33,6 +33,7 @@ const download = async () => {
 
   console.log(`Download ${mediaUrl.value}`);
   if (mediaUrl.value == null || mediaUrl.value === "") {
+    loading.value = false;
     const errorMessage = "Media URL is empty";
     console.log(errorMessage);
     error.value = errorMessage;
