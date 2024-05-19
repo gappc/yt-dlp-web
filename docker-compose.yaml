@@ -1,0 +1,9 @@
+services:
+  server:
+    image: gappc/yt-dlp-web:0.0.1
+    build:
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    ports:
+    - "13000:8000"
+    user: "1000:1000"

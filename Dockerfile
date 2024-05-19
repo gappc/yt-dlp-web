@@ -8,13 +8,27 @@ RUN apk add --update --no-cache --virtual .build-deps gcc musl-dev \
 && rm -rf ~/.cache/pip \
 && apk del .build-deps \
 && apk add ffmpeg \
-&& chmod o+w /media \
+&& apk add nodejs npm \
+&& npm install -g local-web-server \
 && adduser -D yt-dlp
 
 COPY ./yt-dlp.conf /etc/yt-dlp.conf
 
-WORKDIR /media
+RUN mkdir -p /app/frontend \
+&& mkdir -p /app/backend 
+
+COPY ./frontend/dist /app/frontend
+COPY ./backend /app/backend
+
+RUN mkdir -p /app/backend/media \
+&& chmod o+w /app/backend/media \
+&& cd /app/backend && npm install
+
+COPY ./docker-runner.sh /app/docker-runner.sh
+RUN chmod +x /app/docker-runner.sh
+
+WORKDIR /app/backend/media
 
 USER yt-dlp
 
-ENTRYPOINT ["yt-dlp"]
+ENTRYPOINT ["sh", "/app/docker-runner.sh"]

@@ -17,7 +17,6 @@ const app = new koa();
 const router = new Router();
 
 const mediaFolder = "media";
-const archiveFolder = `${mediaFolder}/archive`;
 
 router.get("/hello", (ctx) => (ctx.body = "Hello World!"));
 
