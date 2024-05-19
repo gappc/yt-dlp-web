@@ -1,7 +1,10 @@
 <template>
   <div class="container">
-    <input type="text" class="media-url" v-model="mediaUrl" />
-    <p>Media URL: {{ mediaUrl }}</p>
+    <p>
+      <div>Enter the Media URL and click download</div>
+      <div>Activate "Audio only (mp3)" to download just the mp3</div>
+    </p>
+    <input type="text" placeholder="Media URL" class="media-url" v-model="mediaUrl" />
 
     <label for="audioOnly">
       <input id="audioOnly" type="checkbox" v-model="audioOnly" />
