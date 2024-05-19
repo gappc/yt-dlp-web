@@ -8,6 +8,8 @@
       Audio only (mp3)
     </label>
 
+    <span v-if="loading">Loading...</span>
+
     <button type="button" @click="download">Download</button>
     <p class="error">{{ error }}</p>
   </div>
@@ -19,9 +21,11 @@ import { ref } from "vue";
 const mediaUrl = ref<string>();
 const audioOnly = ref(false);
 
+const loading = ref(false);
 const error = ref<string>();
 
 const download = async () => {
+  loading.value = true;
   error.value = undefined;
 
   console.log(`Download ${mediaUrl.value}`);
@@ -37,7 +41,17 @@ const download = async () => {
   }`;
 
   try {
+    console.log(`Fetch ${apiUrl}`);
     const response = await fetch(apiUrl);
+
+    if (!response.ok) {
+      const errorMessage = `HTTP error ${response.status}: ${response.statusText}`;
+      console.error(errorMessage);
+      error.value = errorMessage;
+      return;
+    }
+
+    console.log(`Response: ${response.status} ${response.statusText}`);
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -57,6 +71,7 @@ const download = async () => {
       error.value = "Error occurred";
     }
   }
+  loading.value = false;
 };
 </script>
 

@@ -37,40 +37,54 @@ router.get("/videos", async (ctx) => {
     return;
   }
 
-  const baseCommand = `yt-dlp --no-simulate --dump-json -o "${mediaFolder}/%(title)s.%(ext)s"`;
-  const withAudioOnly = audioOnly ? "-f 'ba' -x --audio-format mp3" : "";
+  try {
+    const baseCommand = `yt-dlp --no-simulate --dump-json -o "${mediaFolder}/%(title)s.%(ext)s"`;
+    const withAudioOnly = audioOnly ? "-f 'ba' -x --audio-format mp3" : "";
 
-  const command = `${baseCommand} ${withAudioOnly} ${mediaUrl}`;
+    const command = `${baseCommand} ${withAudioOnly} ${mediaUrl}`;
 
-  console.log("command", command);
+    console.log("command", command);
 
-  const { stderr, stdout } = await execAsync(command);
+    const { stderr, stdout } = await execAsync(command);
 
-  console.log("Download success");
+    console.log("Download success");
 
-  const data = JSON.parse(stdout);
+    const data = JSON.parse(stdout);
 
-  const fileInfo = buildFileInfo(data.filename, audioOnly);
+    const fileInfo = buildFileInfo(data.filename, audioOnly);
 
-  console.log("fileInfo", fileInfo);
+    console.log("fileInfo", fileInfo);
 
-  const encodedFilename = encodeURIComponent(fileInfo.filename);
+    const encodedFilename = encodeURIComponent(fileInfo.filename);
 
-  ctx.response.set(
-    "content-disposition",
-    `attachment; filename*=UTF-8''${encodedFilename}`
-  );
+    ctx.response.set(
+      "content-disposition",
+      `attachment; filename*=UTF-8''${encodedFilename}`
+    );
 
-  ctx.response.set("filename", encodedFilename);
+    ctx.response.set("filename", encodedFilename);
 
-  const src = fs.createReadStream(fileInfo.location);
-  ctx.body = src;
+    const src = fs.createReadStream(fileInfo.location);
+    ctx.body = src;
+  } catch (error) {
+    console.log("Error downloading file", error);
+
+    ctx.status = 500;
+
+    if (error instanceof Error) {
+      ctx.body = error.message;
+    } else if (typeof error === "string") {
+      ctx.body = error;
+    } else {
+      ctx.body = "Error downloading file: " + error;
+    }
+  }
 });
 
 app.use(router.routes()).use(router.allowedMethods());
 
 // cron job to remove files in media folder
-const cronInterval = "* * * * * *";
+const cronInterval = "1 * * * *";
 cron.schedule(cronInterval, () => {
   console.log(`running file remove task for cron interval ${cronInterval}`);
 
@@ -82,7 +96,7 @@ cron.schedule(cronInterval, () => {
     const isOlder = fs.statSync(filePath).ctime.getTime() < Date.now() - older; // 604800000 = 7 * 24 * 60 * 60 * 1000
 
     if (isOlder) {
-      console.log(`- deleting file ${file} after ${older}ms`);
+      console.log(`- deleting file ${filePath} after ${older}ms`);
       fs.unlinkSync(filePath);
     }
   });
